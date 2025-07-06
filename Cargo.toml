@@ -1,0 +1,17 @@
+[package]
+name = "freecell"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rand = "0.9.1"
+scrap = "0.5.0"
+image = "0.25.6"
+rdev = "0.5.3"
+screenshots = "0.8.10"
+opencv = { version = "0.95.0" }
+dotenv = "0.15.0"
+glob = "0.3.2"
+
+[build]
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
