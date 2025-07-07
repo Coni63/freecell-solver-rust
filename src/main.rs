@@ -26,6 +26,8 @@ fn generate_random_deck() -> Vec<Card> {
 }
 
 fn main() {
+    dotenv().ok();
+
     // eprintln!("🃏 Génération d'un jeu de cartes basé sur un screenshot...");
     // let screenshot = screen::start_screenshot();
     // let cards = ocr::run_ocr();
@@ -35,4 +37,20 @@ fn main() {
     let deck = generate_random_deck();
     let game = Game::new(&deck);
     println!("{:?}", game);
+
+    for c1 in 0..8 {
+        for c2 in 0..8 {
+            if let Some(offset) = game.has_move(c1, c2) {
+                eprintln!(
+                    "🃏 Déplacement possible de la colonne {} vers la colonne {} avec un offset de {}",
+                    c1, c2, offset
+                );
+            } else {
+                eprintln!(
+                    "🃏 Aucun déplacement possible de la colonne {} vers la colonne {}",
+                    c1, c2
+                );
+            }
+        }
+    }
 }
