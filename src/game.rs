@@ -91,71 +91,81 @@ impl Game {
     }
 
     #[allow(dead_code)]
-    fn max_card_move(&self) -> usize {
+    fn max_card_move(&self, remove_one_column: bool) -> usize {
         // The maximum number of cards that can be moved at once is determined by the number of freecells
         // and the number of empty columns.
         let freecells_count = self.freecells.iter().filter(|&&c| c.is_none()).count();
-        let free_columns_count = self.columns.iter().filter(|c| c.is_empty()).count();
-        eprintln!("{} {}", freecells_count, free_columns_count);
+        let mut free_columns_count = self.columns.iter().filter(|c| c.is_empty()).count();
+
+        if remove_one_column && free_columns_count > 0 {
+            // If we are moving card to an ampty column, we need to adjust the max number of card moved
+            free_columns_count -= 1;
+        }
+
         ((1 << free_columns_count) * (freecells_count + 1)).min(13)
     }
 
+    #[allow(dead_code)]
     fn max_sequence(&self, column: usize) -> usize {
-        if self.columns[column].len() < 2 {
-            return self.columns[column].len();
+        let column_size = self.columns[column].len();
+
+        if column_size < 2 {
+            return column_size;
         }
 
-        for i in (0..self.columns[column].len() - 1).rev() {
-            let a = self.columns[column][i + 1];
-            let b = self.columns[column][i];
-
-            eprintln!("Checking if {:?} can stack on {:?}", a, b);
-
-            if !b.can_stack(&a) {
-                return i;
+        for i in (0..column_size - 1).rev() {
+            let bottom_card = self.columns[column][i + 1];
+            let top_card = self.columns[column][i];
+            if !top_card.can_stack(&bottom_card) {
+                return column_size - i - 1;
             }
-
-            eprintln!("OK");
         }
 
-        self.columns[column].len() - 1
+        column_size
     }
 
     #[allow(dead_code)]
-    pub fn has_move(&self, from: usize, to: usize) -> Option<usize> {
+    pub fn get_all_possible_moves(&self, from: usize, to: usize) -> Vec<usize> {
+        let mut ans = Vec::new();
+
         if from >= 8 || to >= 8 {
-            return None; // Invalid column indices
+            return ans; // Invalid column indices
         }
 
         if from == to {
-            return None; // Cannot move to the same column
+            return ans; // Cannot move to the same column
         }
 
         if self.columns[from].is_empty() {
-            return None; // Cannot move from an empty column
+            return ans; // Cannot move from an empty column
         }
 
-        let target_card = self.columns[to].last().unwrap();
-        let max_moves = self.max_card_move().min(self.columns[from].len());
+        match self.columns[to].last() {
+            Some(target_card) => {
+                let max_moves = self.max_card_move(false);
+                let source_column_sequence = self.max_sequence(from);
+                let max_moves = max_moves.min(source_column_sequence);
+                for i in 1..=max_moves {
+                    let offset = self.columns[from].len() - i;
+                    let card_to_move = self.columns[from][offset];
 
-        for i in 1..=max_moves {
-            let offset = self.columns[from].len() - i;
-            let card_to_move = self.columns[from][offset];
-
-            if i > 1 {
-                // Check if the stack is sorted correctly
-                let previous_card = self.columns[from][offset + 1];
-                if !card_to_move.can_stack(&previous_card) {
-                    return None;
+                    if target_card.can_stack(&card_to_move) {
+                        ans.push(offset);
+                    }
                 }
             }
-
-            if target_card.can_stack(&card_to_move) {
-                return Some(offset);
+            None => {
+                let max_moves = self.max_card_move(true);
+                let source_column_sequence = self.max_sequence(from);
+                let max_moves = max_moves.min(source_column_sequence);
+                for i in 1..=max_moves {
+                    let offset = self.columns[from].len() - i;
+                    ans.push(offset);
+                }
             }
-        }
+        };
 
-        None
+        ans
     }
 }
 
@@ -220,7 +230,7 @@ mod tests {
             foundations: [0; 4],
         };
 
-        assert_eq!(game.max_card_move(), 10); // 4 freecell + 1 empty column
+        assert_eq!(game.max_card_move(false), 10); // 4 freecell + 1 empty column
     }
 
     #[test]
@@ -240,7 +250,7 @@ mod tests {
             foundations: [0; 4],
         };
 
-        assert_eq!(game.max_card_move(), 13);
+        assert_eq!(game.max_card_move(false), 13);
     }
 
     #[test]
@@ -265,7 +275,7 @@ mod tests {
             foundations: [0; 4],
         };
 
-        assert_eq!(game.max_card_move(), 2); // 4 freecell + 1 empty column
+        assert_eq!(game.max_card_move(false), 2); // 4 freecell + 1 empty column
     }
 
     #[test]
@@ -290,7 +300,7 @@ mod tests {
             foundations: [0; 4],
         };
 
-        assert_eq!(game.max_card_move(), 1); // only 1 move
+        assert_eq!(game.max_card_move(false), 1); // only 1 move
     }
 
     #[test]
@@ -306,7 +316,7 @@ mod tests {
                     Card::from("2H"),
                     Card::from("1S"),
                 ],
-                vec![],
+                vec![Card::from("5S"), Card::from("4D")],
                 vec![],
                 vec![],
                 vec![],
@@ -316,9 +326,10 @@ mod tests {
         };
 
         assert_eq!(game.max_sequence(0), 3);
-        // assert_eq!(game.max_sequence(1), 1);
-        // assert_eq!(game.max_sequence(2), 1);
-        // assert_eq!(game.max_sequence(3), 3);
-        assert_eq!(game.max_sequence(4), 0);
+        assert_eq!(game.max_sequence(1), 1);
+        assert_eq!(game.max_sequence(2), 1);
+        assert_eq!(game.max_sequence(3), 3);
+        assert_eq!(game.max_sequence(4), 2);
+        assert_eq!(game.max_sequence(5), 0);
     }
 }
