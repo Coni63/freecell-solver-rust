@@ -38,13 +38,5 @@ fn main() {
     let game = Game::new(&deck);
     println!("{:?}", game);
 
-    for c1 in 0..8 {
-        for c2 in 0..8 {
-            let offsets = game.get_all_possible_moves(c1, c2);
-            eprintln!(
-                "🃏 Déplacement possible de la colonne {} vers la colonne {} avec un offset de {:?}",
-                c1, c2, offsets
-            );
-        }
-    }
+    let moves = game.get_all_possible_moves();
 }

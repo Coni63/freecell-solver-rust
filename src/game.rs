@@ -63,6 +63,7 @@ impl From<&str> for Card {
     }
 }
 
+#[derive(Clone)]
 pub struct Game {
     pub columns: [Vec<Card>; 8],
     pub freecells: [Option<Card>; 4],
@@ -81,6 +82,8 @@ impl Game {
             let column_index = i % 8;
             game.columns[column_index].push(*card);
         }
+
+        game.apply_foundation_moves();
 
         game
     }
@@ -125,7 +128,11 @@ impl Game {
     }
 
     #[allow(dead_code)]
-    pub fn get_all_possible_moves(&self, from: usize, to: usize) -> Vec<usize> {
+    fn get_all_possible_moves_between_columns(
+        &self,
+        from: usize,
+        to: usize,
+    ) -> Vec<(usize, usize, usize)> {
         let mut ans = Vec::new();
 
         if from >= 8 || to >= 8 {
@@ -150,7 +157,7 @@ impl Game {
                     let card_to_move = self.columns[from][offset];
 
                     if target_card.can_stack(&card_to_move) {
-                        ans.push(offset);
+                        ans.push((from, to, offset));
                     }
                 }
             }
@@ -160,12 +167,109 @@ impl Game {
                 let max_moves = max_moves.min(source_column_sequence);
                 for i in 1..=max_moves {
                     let offset = self.columns[from].len() - i;
-                    ans.push(offset);
+                    ans.push((from, to, offset));
                 }
             }
         };
 
         ans
+    }
+
+    pub fn get_all_possible_moves(&self) -> Vec<(usize, usize, usize)> {
+        let mut ans = Vec::new();
+
+        for from in 0..8 {
+            for to in 0..8 {
+                ans.extend(self.get_all_possible_moves_between_columns(from, to));
+            }
+
+            // Check if we can move to freecells
+            for freecell_index in 0..4 {
+                if self.freecells[freecell_index].is_none() {
+                    // If the freecell is empty, we can move any card from the column to it
+                    if let Some(card) = self.columns[from].last() {
+                        ans.push((from, 8 + freecell_index, self.columns[from].len() - 1));
+                        break; // it makes no sense to check other freecells
+                    }
+                }
+            }
+        }
+
+        ans
+    }
+
+    pub fn apply_move(&mut self, from: usize, to: usize, offset: usize) -> Result<(), String> {
+        if from >= 8 || to >= 8 {
+            return Err("Invalid column indices".to_string());
+        }
+
+        if from == to {
+            return Err("Cannot move to the same column".to_string());
+        }
+
+        if offset >= self.columns[from].len() {
+            return Err("Invalid offset".to_string());
+        }
+
+        let cards_to_move = self.columns[from][offset..].to_vec();
+        self.columns[from].truncate(offset);
+
+        if to < 8 {
+            // Moving between columns
+            if let Some(target_card) = self.columns[to].last() {
+                if !cards_to_move.iter().all(|card| target_card.can_stack(card)) {
+                    return Err("Cannot stack cards on the target card".to_string());
+                }
+            }
+            self.columns[to].extend(cards_to_move);
+        } else {
+            // Moving to a freecell
+            let freecell_index = to - 8;
+            if freecell_index >= 4 {
+                return Err("Invalid freecell index".to_string());
+            }
+            if self.freecells[freecell_index].is_some() {
+                return Err("Freecell is already occupied".to_string());
+            }
+            self.freecells[freecell_index] = Some(cards_to_move[0]);
+        }
+
+        self.apply_foundation_moves();
+
+        Ok(())
+    }
+
+    fn apply_foundation_moves(&mut self) {
+        let mut has_move = false;
+        loop {
+            for col in 0..8 {
+                if self.columns[col].is_empty() {
+                    continue; // Skip empty columns
+                }
+
+                let card = self.columns[col].last().unwrap();
+                let foundation_index = match card.suit {
+                    Suit::Diamond => 0,
+                    Suit::Club => 1,
+                    Suit::Spade => 2,
+                    Suit::Heart => 3,
+                };
+
+                if self.foundations[foundation_index] < 13
+                    && card.rank == self.foundations[foundation_index] + 1
+                {
+                    // Move the card to the foundation
+                    self.foundations[foundation_index] += 1;
+                    self.columns[col].pop();
+                    has_move = true;
+                    break; // Exit the loop to re-evaluate the game state
+                }
+            }
+
+            if !has_move {
+                break;
+            }
+        }
     }
 }
 
