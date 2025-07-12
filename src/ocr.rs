@@ -2,8 +2,8 @@ use ::core::panic;
 
 use glob::glob;
 use opencv::{
-    core::{self, Mat, Point, Scalar},
-    highgui, imgcodecs, imgproc,
+    core::{self, Mat, Point},
+    imgcodecs, imgproc,
     prelude::*,
 };
 

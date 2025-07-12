@@ -187,7 +187,7 @@ impl Game {
             for freecell_index in 0..4 {
                 if self.freecells[freecell_index].is_none() {
                     // If the freecell is empty, we can move any card from the column to it
-                    if let Some(card) = self.columns[from].last() {
+                    if self.columns[from].last().is_some() {
                         ans.push((from, 8 + freecell_index, self.columns[from].len() - 1));
                         break; // it makes no sense to check other freecells
                     }
@@ -240,8 +240,8 @@ impl Game {
     }
 
     fn apply_foundation_moves(&mut self) {
-        let mut has_move = false;
         loop {
+            let mut has_move = false;
             for col in 0..8 {
                 if self.columns[col].is_empty() {
                     continue; // Skip empty columns

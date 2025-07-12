@@ -1,10 +1,9 @@
 use image::{ImageBuffer, RgbaImage};
 use rdev::{Button, Event, EventType, listen};
 use scrap::{Capturer, Display};
-use std::process::Command;
 use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::Duration;
-use std::{fs, thread};
 
 pub struct Screenshot {
     pub x1: i32,
@@ -12,46 +11,6 @@ pub struct Screenshot {
     pub x2: i32,
     pub y2: i32,
     pub img: RgbaImage,
-}
-
-fn ocr_with_cli(image_path: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let output =
-        Command::new(std::env::var("TESSERACT_PATH").unwrap_or_else(|_| "tesseract".to_string()))
-            .arg(image_path)
-            .arg("stdout") // affiche dans la sortie standard
-            .arg("-l")
-            .arg("eng")
-            .output()?;
-
-    if output.status.success() {
-        let text = String::from_utf8(output.stdout)?;
-        Ok(text)
-    } else {
-        Err(format!("Tesseract failed: {:?}", output.stderr).into())
-    }
-}
-
-#[allow(dead_code)]
-pub fn run_ocr(buffer: &RgbaImage) -> Option<String> {
-    let temp_path = "temp_ocr.png";
-    buffer.save(temp_path).unwrap();
-
-    let mut ans = None;
-    match ocr_with_cli(temp_path) {
-        Ok(text) => {
-            ans = Some(text);
-        }
-        Err(e) => eprintln!("Erreur OCR : {}", e),
-    }
-
-    fs::remove_file(temp_path).unwrap_or_else(|_| {
-        eprintln!(
-            "⚠️ Impossible de supprimer le fichier temporaire {}",
-            temp_path
-        )
-    });
-
-    ans
 }
 
 fn capture_region(x1: i32, y1: i32, x2: i32, y2: i32) -> RgbaImage {

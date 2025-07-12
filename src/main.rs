@@ -1,10 +1,10 @@
 mod game;
 mod ocr;
 mod screen;
-
 use crate::game::{Card, Game, Suit};
 use dotenv::dotenv;
 use rand::seq::SliceRandom;
+use std::time::Instant;
 
 #[allow(dead_code)]
 fn generate_random_deck() -> Vec<Card> {
@@ -28,15 +28,31 @@ fn generate_random_deck() -> Vec<Card> {
 fn main() {
     dotenv().ok();
 
-    // eprintln!("🃏 Génération d'un jeu de cartes basé sur un screenshot...");
-    // let screenshot = screen::start_screenshot();
-    // let cards = ocr::run_ocr();
-    // eprintln!("{:?}", cards.iter().map(|p| p.card).collect::<Vec<_>>());
+    let deck = if dotenv::var("USE_RANDOM").unwrap_or("0".to_string()) == "1" {
+        eprintln!("🃏 Génération d'un jeu de cartes aléatoire...");
+        generate_random_deck()
+    } else {
+        eprintln!("🃏 Génération d'un jeu de cartes basé sur un screenshot...");
+        let _screenshot = screen::start_screenshot();
+        let cards = ocr::run_ocr();
+        cards.iter().map(|p| p.card).collect::<Vec<_>>()
+    };
 
-    eprintln!("🃏 Génération d'un jeu de cartes aléatoire...");
-    let deck = generate_random_deck();
     let game = Game::new(&deck);
     println!("{:?}", game);
 
-    let moves = game.get_all_possible_moves();
+    let now = Instant::now();
+
+    let mut all_games: Vec<Game> = vec![];
+    let actions = game.get_all_possible_moves();
+    for (from, to, offset) in actions {
+        let mut gc = game.clone();
+        if gc.apply_move(from, to, offset).is_ok() {
+            all_games.push(gc);
+        }
+    }
+    eprintln!("Found {} possible moves", all_games.len());
+
+    let elapsed = now.elapsed();
+    println!("Elapsed: {:.2?}", elapsed);
 }
