@@ -7,7 +7,7 @@ use opencv::{
     prelude::*,
 };
 
-use crate::game::Card;
+use crate::card::Card;
 
 #[derive(Debug, Clone)]
 pub struct CardPosition {

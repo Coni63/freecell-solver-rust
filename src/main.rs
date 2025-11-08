@@ -1,7 +1,12 @@
+mod action;
+mod card;
 mod game;
 mod ocr;
 mod screen;
-use crate::game::{Card, Game, Suit};
+mod solver;
+use crate::card::{Card, Suit};
+use crate::game::Game;
+use crate::solver::Solver;
 use dotenv::dotenv;
 use rand::seq::SliceRandom;
 use std::time::Instant;
@@ -45,16 +50,17 @@ fn main() {
 
     let now = Instant::now();
 
-    let mut all_games: Vec<Game> = vec![];
-    let actions = game.get_all_possible_moves();
-    for action in actions.iter() {
-        let mut gc = game.clone();
-        if gc.apply(action).is_ok() {
-            all_games.push(gc);
-        }
-    }
-    eprintln!("Found {} possible moves", all_games.len());
-
+    let solver = Solver::new(game);
+    let actions = solver.solve(10000);
     let elapsed = now.elapsed();
     println!("Elapsed: {:.2?}", elapsed);
+
+    if let Some(solution) = actions {
+        eprintln!("✅ Solution trouvée en {} mouvements:", solution.len());
+        for action in solution {
+            eprintln!("  - {:?}", action);
+        }
+    } else {
+        eprintln!("❌ Aucune solution trouvée dans la limite de mouvements.");
+    }
 }
