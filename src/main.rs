@@ -1,6 +1,7 @@
 mod action;
 mod card;
 mod game;
+mod heap;
 mod ocr;
 mod screen;
 mod solver;
@@ -51,7 +52,7 @@ fn main() {
     let now = Instant::now();
 
     let solver = Solver::new(game);
-    let actions = solver.solve(10000);
+    let actions = solver.solve(1000000);
     let elapsed = now.elapsed();
     println!("Elapsed: {:.2?}", elapsed);
 

@@ -133,6 +133,14 @@ impl Hash for Game {
     }
 }
 
+impl PartialEq for Game {
+    fn eq(&self, other: &Self) -> bool {
+        self.hash_key() == other.hash_key()
+    }
+}
+
+impl Eq for Game {}
+
 #[cfg(test)]
 mod tests {
 

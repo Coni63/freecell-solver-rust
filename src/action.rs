@@ -10,7 +10,7 @@ pub enum ActionType {
     ColToCol,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Action {
     pub action_type: ActionType,
     pub source: usize,
